@@ -5,7 +5,7 @@ import './App.css'
 //// Stateless Helper Functions ////
 ////////////////////////////////////
 
-function formsLine(squares, char) {
+function formsLine(squares, player) {
   const lines = [
     [0, 1, 2],
     [3, 4, 5],
@@ -18,70 +18,42 @@ function formsLine(squares, char) {
   ];
   for (let i = 0; i < lines.length; i++) {
     const [a, b, c] = lines[i];
-    if (squares[a] === char && squares[b] === char && squares[c] === char) {
+    if (squares[a] === player && squares[b] === player && squares[c] === player) {
       return true;
     }
   }
   return false;
 }
 
-function isWinningMove(squares, src, dst) {
+function isValidMove(nextPlayer, squares, src, dst) { // Called on the 2nd click after selecting a box
+  const adjacent = [
+    new Set([1, 3, 4]),
+    new Set([0, 2, 3, 4, 5]),
+    new Set([1, 4, 5]),
+    new Set([0, 1, 4, 6, 7]),
+    new Set([0, 1, 2, 3, 5, 6, 7, 8]),
+    new Set([1, 2, 4, 7, 8]),
+    new Set([3, 4, 7]),
+    new Set([3, 4, 5, 6, 8]),
+    new Set([4, 5, 7])
+  ];
+  if (squares[src] !== nextPlayer) return false; // if src isn't belonging to player
+  if (!adjacent[src].has(dst)) return false; // if isn't adjacent square
+  if (squares[dst]) return false; // if adjacent square isn't empty
+  if (squares[4] !== nextPlayer || src === 4) return true; // if player isn't occupying the center square or if the move is on the center square
+  // move must win
   const nextSquares = squares.slice();
   nextSquares[dst] = nextSquares[src];
   nextSquares[src] = null;
-  return formsLine(nextSquares, nextSquares[dst]);
+  return formsLine(nextSquares, nextPlayer);
 }
 
-function validMoves(nextPlayer, squares, currMove) {
-  const adjacent = [
-    [1, 3, 4],
-    [0, 2, 3, 4, 5],
-    [1, 4, 5],
-    [0, 1, 4, 6, 7],
-    [0, 1, 2, 3, 5, 6, 7, 8],
-    [1, 2, 4, 7, 8],
-    [3, 4, 7],
-    [3, 4, 5, 6, 8],
-    [4, 5, 7]
-  ];
-  const validMoves = {};
-  if (formsLine(squares, nextPlayer === 'X' ? 'O' : 'X')) { // If someone has already won according to the board, no valid moves to take
-    return validMoves;
+function hasPrevWon(nextPlayer, squares) { 
+  const prevPlayer = nextPlayer === 'X' ? 'O' : 'X';
+  if (formsLine(squares, prevPlayer)) { // If someone has already won
+    return prevPlayer;
   }
-  if (currMove <= 5) { // If someone hasn't already won and is it still before turn 6 there are always valid moves, just return null
-    return null;
-  }
-  for (let i in squares) { // for each square on the board
-    if (squares[i] === nextPlayer) { // if this is my square
-      const moves = [];
-      for (let j in adjacent[i]) { // for each adjacent square to this square
-        if (squares[4] === nextPlayer) { // in center, only moves that will win or moves on the center square are valid
-          if (!squares[adjacent[i][j]] && (i === '4' || isWinningMove(squares, i, adjacent[i][j]))) {
-            moves.push(adjacent[i][j]);
-          }
-        } else { // not in center, all moves are valid
-          if (!squares[adjacent[i][j]]) { // if the adjacent square is empty
-            moves.push(adjacent[i][j]);
-          }
-        }
-      }
-      validMoves[i] = moves;
-    }
-  }
-  return validMoves;
-}
-
-function calculateWinner(nextPlayer, validMoves) {
-  if (validMoves === null) { // null return means nobody has won yet before the chorus phase
-    return null;
-  }
-  // empty dictionary means lost
-  for (let i in validMoves) {
-    if (validMoves[i].length !== 0) { // if there are any valid moves the game is not over yet
-      return null;
-    }
-  }
-  return nextPlayer === 'X' ? 'O' : 'X'; // other person wins if no valid moves
+  return null;
 }
 
 ////////////////////
@@ -96,24 +68,24 @@ function Square({ value, onSquareClick, style }) {
   );
 }
 
-function Board({ squares, styles, status, handleClick }) {
+function Board({ squares, srcSelection, status, handleClick }) {
   return (
     <>
       <div className="status">{status}</div>
       <div className="board-row">
-        <Square value={squares[0]} onSquareClick={() => handleClick(0)} style={styles[0]}/>
-        <Square value={squares[1]} onSquareClick={() => handleClick(1)} style={styles[1]}/>
-        <Square value={squares[2]} onSquareClick={() => handleClick(2)} style={styles[2]}/>
+        <Square value={squares[0]} onSquareClick={() => handleClick(0)} style={srcSelection === 0 ? 'src' : 'square'}/>
+        <Square value={squares[1]} onSquareClick={() => handleClick(1)} style={srcSelection === 1 ? 'src' : 'square'}/>
+        <Square value={squares[2]} onSquareClick={() => handleClick(2)} style={srcSelection === 2 ? 'src' : 'square'}/>
       </div>
       <div className="board-row">
-        <Square value={squares[3]} onSquareClick={() => handleClick(3)} style={styles[3]}/>
-        <Square value={squares[4]} onSquareClick={() => handleClick(4)} style={styles[4]}/>
-        <Square value={squares[5]} onSquareClick={() => handleClick(5)} style={styles[5]}/>
+        <Square value={squares[3]} onSquareClick={() => handleClick(3)} style={srcSelection === 3 ? 'src' : 'square'}/>
+        <Square value={squares[4]} onSquareClick={() => handleClick(4)} style={srcSelection === 4 ? 'src' : 'square'}/>
+        <Square value={squares[5]} onSquareClick={() => handleClick(5)} style={srcSelection === 5 ? 'src' : 'square'}/>
       </div>
       <div className="board-row">
-        <Square value={squares[6]} onSquareClick={() => handleClick(6)} style={styles[6]}/>
-        <Square value={squares[7]} onSquareClick={() => handleClick(7)} style={styles[7]}/>
-        <Square value={squares[8]} onSquareClick={() => handleClick(8)} style={styles[8]}/>
+        <Square value={squares[6]} onSquareClick={() => handleClick(6)} style={srcSelection === 6 ? 'src' : 'square'}/>
+        <Square value={squares[7]} onSquareClick={() => handleClick(7)} style={srcSelection === 7 ? 'src' : 'square'}/>
+        <Square value={squares[8]} onSquareClick={() => handleClick(8)} style={srcSelection === 8 ? 'src' : 'square'}/>
       </div>
     </>
   );
@@ -123,14 +95,12 @@ export default function Game() {
   const [history, setHistory] = useState([Array(9).fill(null)]);
   const [currentMove, setCurrentMove] = useState(0);
   const [srcSelection, setSrcSelection] = useState(null);
-  const [moveHistory, setMoveHistory] = useState([null]);
 
-  function handlePlay(nextSquares, nextMove) {
-    const nextMoveHistory = [...moveHistory.slice(0, currentMove + 1), validMoves(nextMove % 2 === 0 ? 'X' : 'O', nextSquares, nextMove)];
-    setMoveHistory(nextMoveHistory);
+  function handlePlay(nextSquares) {
     const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
     setHistory(nextHistory);
     setCurrentMove(nextHistory.length - 1);
+    setSrcSelection(null);
   }
 
   function jumpTo(nextMove) {
@@ -139,32 +109,35 @@ export default function Game() {
   }
 
   function handleClick(i) {
-    if (calculateWinner(xIsNext ? 'X' : 'O', currMoves)) { // Nobody moves if someone has won
+    if (hasPrevWon(nextPlayer, currentSquares)) { // Nobody moves if someone has won
       return;
     }
     const nextSquares = currentSquares.slice();
-
     if (currentMove > 5) { // turn 6, start moving the pieces around
-      // if i am occupying the center piece, i must either win or vacate. if i cannot vacate, i will lose
-      if (!(srcSelection === null) && currMoves[srcSelection].includes(i)) { // selected a viable move
-        nextSquares[srcSelection] = null;
-        nextSquares[i] = xIsNext ? 'X' : 'O';
-        setSrcSelection(null);
-        handlePlay(nextSquares, currentMove + 1);
-      } else { // either move isn't viable or not yet selected
-        // am i in the center
-        // if i am get list of valid moves, select the
-        setSrcSelection(null);
-        if (i in currMoves) {
+      if (srcSelection === null) { // If i have not selected a square
+        if (currentSquares[i] === nextPlayer) {
+          setSrcSelection(i);
+        } else {
+          setSrcSelection(null);
+        }
+      }
+      else {
+        if (isValidMove(nextPlayer, currentSquares, srcSelection, i)) { // If the next square is a valid move
+          nextSquares[srcSelection] = null;
+          nextSquares[i] = nextPlayer;
+          handlePlay(nextSquares);
+        }
+        else if (currentSquares[i] === nextPlayer) {
           setSrcSelection(i);
         }
       }
-    } else { // not yet turn 6, normal tic tac toe
+    }
+    else { // not yet turn 6, normal tic tac toe
       if (currentSquares[i]) { // if there is a square at the current position
         return;
       }
-      nextSquares[i] = xIsNext ? 'X' : 'O';
-      handlePlay(nextSquares, currentMove + 1);
+      nextSquares[i] = nextPlayer;
+      handlePlay(nextSquares);
     }
   }
 
@@ -172,12 +145,6 @@ export default function Game() {
   const xIsNext = currentMove % 2 === 0;
   const nextPlayer = xIsNext ? 'X' : 'O';
   const currentSquares = history[currentMove];
-  const currMoves = moveHistory[currentMove];
-  const styles = Array(9).fill("square");
-  if (srcSelection !== null) {
-    styles[srcSelection] = "src";
-    currMoves[srcSelection].forEach((sq) => { styles[sq] = "dst" });
-  }
 
   const moves = history.map((squares, move) => {
     let description;
@@ -193,13 +160,13 @@ export default function Game() {
     );
   });
 
-  const winner = calculateWinner(nextPlayer, currMoves);
+  const winner = hasPrevWon(nextPlayer, currentSquares);
   const status = winner ? 'Winner: ' + winner : 'Next player: ' + nextPlayer;
 
   return (
     <div className="game">
       <div className="game-board">
-        <Board status={status} squares={currentSquares} handleClick={handleClick} styles={styles} />
+        <Board status={status} squares={currentSquares} handleClick={handleClick} srcSelection={srcSelection} />
       </div>
       <div className="game-info">
         <ol>{moves}</ol>
